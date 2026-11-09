@@ -1,0 +1,50 @@
+# Configuración general del proyecto (sin datos sensibles; se puede versionar).
+
+atc:
+  variante: S4HANA_READINESS_2025   # variante usada en la revisión
+  profundidad: 4                    # niveles de dependencias, como ZDEPENDENCIAS
+
+preparacion:
+  lineas_contexto: 12               # líneas de código antes y después de cada tarea
+  prioridades: [1, 2]
+# Formato de las marcas del cliente. Variables: {nota} {linea}
+# {linea} es la línea del código original donde empieza el cambio.
+marcas:
+  prefijo_comentario: "*"     # se antepone a cada línea original comentada
+  orig_inicio: "*REMEDIACION ORIG-INICIO-NOTA:{nota}-LINEA:{linea}"
+  orig_fin:    "*REMEDIACION ORIG-FIN-NOTA:{nota}-LINEA:{linea}"
+  rem_inicio:  "*REMEDIACION REM-INICIO-NOTA:{nota}-LINEA:{linea}"
+  rem_fin:     "*REMEDIACION REM-FIN-NOTA:{nota}-LINEA:{linea}"
+  nota_por_defecto: ""        # si un hallazgo no trae nota ni su regla la define
+
+# Cómo se escribe el código corregido en SAP (Fase 4)
+#   manual     -> copias el código de corregido\ a Eclipse
+#   rfc        -> src\subir.py por el túnel RFC (funciona sin VPN)
+#   claude_mcp -> Claude Code lo escribe con el MCP de VS Code (requiere VPN)
+escritura:
+  modo: rfc
+
+# Interfaz (src\interfaz.py). Comando del botón "Procesar con Claude": Claude Code sin
+# interfaz, con permiso solo para leer/escribir archivos y ejecutar aplicar.py y leer_fuente.py.
+# {programa} se reemplaza por el programa elegido.
+interfaz:
+  # Pasos marcados por defecto en el flujo automático:
+  # revision, preparar, propuestas, aplicar, subir
+  automatico: [revision, preparar, propuestas, aplicar]
+  contexto_cambio: 6      # líneas de código antes y después de cada cambio en la comparación
+  claude:
+    - claude
+    - -p
+    - "procesa trabajo\\{programa}"
+    - --permission-mode
+    - acceptEdits
+    - --allowedTools
+    - Read
+    - Write
+    - Edit
+    - Glob
+    - Grep
+    - "Bash(python src/aplicar.py:*)"
+    - "Bash(python src/leer_fuente.py:*)"
+    - "PowerShell(python src\\aplicar.py:*)"
+    - "PowerShell(python src\\leer_fuente.py:*)"

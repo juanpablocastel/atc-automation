@@ -1,0 +1,96 @@
+# Cómo tratar cada tipo de hallazgo ATC.
+# Se aplica la primera regla que coincida. Campos de coincidencia (opcionales):
+#   check:   texto contenido en el título del check (sin distinguir mayúsculas)
+#   mensaje: expresión regular sobre el mensaje
+#   codigo:  expresión regular sobre el código donde se reporta (esa línea y las 5 siguientes)
+# clasificacion:
+#   pseudocomentario -> caso estándar: aplicar.py agrega el pseudocomentario, sin Claude
+#   automatico       -> Claude corrige; el cambio es mecánico
+#   propuesta        -> Claude propone; Joseph revisa con atención
+#   reporte          -> no se corrige; solo se documenta
+# nota: número de nota SAP para las marcas. Si se omite, se toma del mensaje
+#       ("Note: 0002215424" -> 2215424) o de marcas.nota_por_defecto.
+
+reglas:
+  # PENDIENTE: completar con el mensaje real del hallazgo y el pseudocomentario del proyecto
+  # - nombre: BAPI_GOODSMVT_CREATE (caso estándar)
+  #   codigo: "BAPI_GOODSMVT_CREATE"
+  #   mensaje: "..."
+  #   clasificacion: pseudocomentario
+  #   pseudocomentario: '"#EC ...'
+  #   nota: ""
+  #   justificacion: "Caso estándar del proyecto: se justifica con pseudocomentario."
+
+  - nombre: Acceso por índice sobre resultado sin ORDER BY
+    check: "without ORDER BY"
+    mensaje: "at Include \\S+ line \\d+"
+    clasificacion: propuesta
+    nota: ""          # PENDIENTE: nota que usa el proyecto para este check
+    instruccion: >
+      El problema no está en la línea reportada sino en el SELECT referenciado
+      (include y línea indicados en el mensaje). Corregir ese SELECT para que el
+      orden sea determinista: agregar ORDER BY (PRIMARY KEY o los campos que
+      correspondan) o, si el resultado va a una tabla interna, un SORT justo
+      después del SELECT por los campos que usa el acceso posterior.
+      Un solo cambio suele resolver varios hallazgos.
+
+  - nombre: SELECT SINGLE posiblemente no único
+    check: "without ORDER BY"
+    mensaje: "SELECT SINGLE is possibly not unique"
+    clasificacion: propuesta
+    nota: ""          # PENDIENTE
+    instruccion: >
+      Revisar si el WHERE cubre la clave completa de la tabla. Si no la cubre,
+      reemplazar por SELECT ... UP TO 1 ROWS ... ORDER BY ... ENDSELECT (o la
+      forma equivalente que use el estilo del programa), conservando los mismos
+      campos destino. Si no se puede saber la clave de la tabla, confianza baja
+      e indicar en "verificar" qué hay que confirmar.
+
+  - nombre: Conflicto de longitud por extensión de MATNR
+    check: "Field Length Extensions"
+    mensaje: "Move length conflict"
+    clasificacion: propuesta
+    instruccion: >
+      El campo destino es más corto que el origen (por ejemplo MATNR de 40 a 30).
+      Ajustar el tipo del destino para que sea compatible (TYPE matnr o la
+      longitud correcta). Nunca truncar en silencio.
+
+  - nombre: Concatenación con campo extendido
+    check: "Field Length Extensions"
+    mensaje: "Concatenation detected"
+    clasificacion: reporte
+    instruccion: >
+      Normalmente informativo. Revisar que el destino de la concatenación tenga
+      longitud suficiente; si no la tiene, proponer el cambio con confianza media.
+
+  - nombre: Funcionalidad no disponible (existe alternativa)
+    mensaje: "Functionality unavailable \\(alternative exists\\)"
+    clasificacion: propuesta
+    instruccion: >
+      El código usa un objeto (transacción, función, tabla) que en S/4HANA ya no
+      está disponible; la alternativa está en la nota SAP del hallazgo. Analizar
+      cómo se usa el objeto en el código. Si el literal no se ejecuta (comentario,
+      texto, rama muerta) o el uso concreto sigue funcionando según la nota, proponer
+      agregar el pseudocomentario que indica SAP (en TAREA.md) al final de la
+      sentencia, justificándolo. Si hay que migrar a la alternativa (por ejemplo un
+      batch input sobre ME21 que debería pasar a BAPI_PO_CREATE1), no reescribir el
+      proceso: dejar la tarea en sin_cambio describiendo la migración necesaria y su
+      alcance, salvo que el reemplazo sea directo y de pocas líneas (entonces
+      propuesta con confianza baja).
+
+  - nombre: Cambio incompatible de funcionalidad existente
+    mensaje: "Syntactically incompatible change of existing functionality"
+    clasificacion: propuesta
+    instruccion: >
+      La interfaz del objeto referenciado cambió en S/4HANA (por ejemplo parámetros
+      de una BAPI que pasan a campos extendidos, como MATERIAL -> MATERIAL_LONG).
+      Revisar la llamada y las estructuras que se le pasan y adaptarlas según la
+      nota del hallazgo, conservando el comportamiento. Si con el código disponible
+      no se puede saber qué campos cambian, confianza baja e indicar en "verificar"
+      qué revisar en la nota.
+
+  - nombre: Otros
+    clasificacion: reporte
+    instruccion: >
+      Hallazgo sin regla definida. No corregir; describir el hallazgo y qué
+      habría que revisar.

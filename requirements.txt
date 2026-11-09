@@ -1,0 +1,5 @@
+pyrfc==3.3.1
+PyYAML==6.0.3
+openpyxl==3.1.5
+keyring==25.7.0
+streamlit==1.67.0

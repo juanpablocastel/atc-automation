@@ -1,0 +1,11 @@
+# Plantilla. Copia este archivo como conexion.local.yaml y completa los datos
+# de tu entrada de SAP Logon. conexion.local.yaml NO se sube a git.
+# La contraseña no va aquí: se pide la primera vez y se guarda en el
+# Administrador de credenciales de Windows.
+# Los valores numéricos van entre comillas para no perder los ceros a la izquierda.
+ashost: "<servidor de aplicación>"
+sysnr: "00"
+client: "<mandante>"
+saprouter: "<router string, ej. /H/x.x.x.x/S/3299>"
+user: "<usuario SAP>"
+lang: "ES"

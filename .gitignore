@@ -1,0 +1,14 @@
+# Entorno y artefactos
+.venv/
+__pycache__/
+*.pyc
+*.log
+
+# Datos del cliente (código, hallazgos, reportes): no salen de la PC
+trabajo/
+data/
+output/
+
+# Credenciales y conexión
+config/*.local.yaml
+sapnwrfc.ini
